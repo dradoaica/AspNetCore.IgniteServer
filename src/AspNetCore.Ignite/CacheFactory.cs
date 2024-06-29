@@ -1,31 +1,35 @@
-﻿namespace AspNetCore.Ignite;
-
-using System;
-using System.Security.Authentication;
-using Apache.Ignite.Core;
+﻿using Apache.Ignite.Core;
 using Apache.Ignite.Core.Cache;
 using Apache.Ignite.Core.Cache.Configuration;
 using Apache.Ignite.Core.Client;
 using Apache.Ignite.Core.Client.Cache;
 using Apache.Ignite.Core.Log;
-using Utils;
+using AspNetCore.Ignite.Utils;
+using System;
+using System.Security.Authentication;
+
+namespace AspNetCore.Ignite;
 
 public static class CacheFactory
 {
-    public static IgniteClientConfiguration GetIgniteClientConfiguration(string endpoint = "127.0.0.1",
-        string userName = null, string password = null, bool useSsl = false,
-        string certificatePath = null, string certificatePassword = null)
+    public static IgniteClientConfiguration GetIgniteClientConfiguration(
+        string endpoint = "127.0.0.1",
+        string userName = null,
+        string password = null,
+        bool useSsl = false,
+        string certificatePath = null,
+        string certificatePassword = null)
     {
         IgniteClientConfiguration igniteClientConfiguration = new()
         {
-            Endpoints = new[] {endpoint},
+            Endpoints = new[] { endpoint },
             RetryPolicy = new ClientRetryReadPolicy(),
             RetryLimit = 5,
             SocketTimeout = TimeSpan.FromSeconds(30),
             EnablePartitionAwareness = true,
             EnableHeartbeats = true,
             // Enable trace logging to observe discovery process.
-            Logger = new ConsoleLogger {MinLevel = LogLevel.Trace}
+            Logger = new ConsoleLogger { MinLevel = LogLevel.Trace },
         };
         if (!string.IsNullOrWhiteSpace(userName))
         {
@@ -45,7 +49,7 @@ public static class CacheFactory
                 CertificatePassword = certificatePassword,
                 CheckCertificateRevocation = true,
                 SkipServerCertificateValidation = true,
-                SslProtocols = SslProtocols.Tls12
+                SslProtocols = SslProtocols.Tls12,
             };
         }
 
@@ -61,7 +65,9 @@ public static class CacheFactory
     public static IIgniteClient ConnectAsClient(IgniteClientConfiguration igniteClientConfiguration) =>
         Ignition.StartClient(igniteClientConfiguration);
 
-    public static ICache<TKey, TData> GetOrCreateCache<TKey, TData>(IIgnite ignite, string cacheName,
+    public static ICache<TKey, TData> GetOrCreateCache<TKey, TData>(
+        IIgnite ignite,
+        string cacheName,
         Action<CacheConfiguration> extendConfigurationAction = null)
     {
         CacheConfiguration cacheCfg = new()
@@ -69,21 +75,23 @@ public static class CacheFactory
             Name = cacheName,
             CacheMode = CacheMode.Partitioned,
             GroupName = typeof(TData).FullNameWithoutAssemblyInfo(),
-            QueryEntities = new[] {new QueryEntity {KeyType = typeof(TKey), ValueType = typeof(TData)}},
+            QueryEntities = new[] { new QueryEntity { KeyType = typeof(TKey), ValueType = typeof(TData) } },
             Backups = 1,
             PlatformCacheConfiguration = new PlatformCacheConfiguration
             {
                 KeyTypeName = typeof(TKey).FullNameWithoutAssemblyInfo(),
-                ValueTypeName = typeof(TData).FullNameWithoutAssemblyInfo()
-            }
+                ValueTypeName = typeof(TData).FullNameWithoutAssemblyInfo(),
+            },
         };
         extendConfigurationAction?.Invoke(cacheCfg);
         var cache = ignite.GetOrCreateCache<TKey, TData>(cacheCfg);
         return cache;
     }
 
-    public static ICacheClient<TKey, TData> GetOrCreateCacheClient<TKey, TData>(IIgniteClient ignite,
-        string cacheName, Action<CacheClientConfiguration> extendConfigurationAction = null)
+    public static ICacheClient<TKey, TData> GetOrCreateCacheClient<TKey, TData>(
+        IIgniteClient ignite,
+        string cacheName,
+        Action<CacheClientConfiguration> extendConfigurationAction = null)
     {
         CacheClientConfiguration cacheCfg =
             new(
@@ -92,15 +100,16 @@ public static class CacheFactory
                     PlatformCacheConfiguration = new PlatformCacheConfiguration
                     {
                         KeyTypeName = typeof(TKey).FullNameWithoutAssemblyInfo(),
-                        ValueTypeName = typeof(TData).FullNameWithoutAssemblyInfo()
-                    }
-                }, true)
+                        ValueTypeName = typeof(TData).FullNameWithoutAssemblyInfo(),
+                    },
+                },
+                true)
             {
                 Name = cacheName,
                 CacheMode = CacheMode.Partitioned,
                 GroupName = typeof(TData).FullNameWithoutAssemblyInfo(),
-                QueryEntities = new[] {new QueryEntity {KeyType = typeof(TKey), ValueType = typeof(TData)}},
-                Backups = 1
+                QueryEntities = new[] { new QueryEntity { KeyType = typeof(TKey), ValueType = typeof(TData) } },
+                Backups = 1,
             };
         extendConfigurationAction?.Invoke(cacheCfg);
         return ignite.GetOrCreateCache<TKey, TData>(cacheCfg);
